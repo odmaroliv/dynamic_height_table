@@ -1,81 +1,39 @@
 import 'package:flutter/material.dart';
+import 'models/table_cell_data.dart';
 
-class DynamicHeightTableCell extends StatelessWidget {
-  final String cellId;
-  final dynamic cell;
-  final TextStyle? cellStyle;
-  final Set<String> readOnlyCells;
-  final bool isEditable;
-  final Function(int, int)? onCellTap;
-  final Function(int, int)? onCellHover;
-  final Function(String) onEditingCell;
-  final String? editingCellId;
+class DynamicTableCell extends StatelessWidget {
+  final TableCellData cellData;
+  final TextStyle cellTextStyle;
+  final Function(dynamic)? onCellUpdate;
+  final bool wrapContent;
 
-  DynamicHeightTableCell({
-    required this.cellId,
-    required this.cell,
-    this.cellStyle,
-    required this.readOnlyCells,
-    required this.isEditable,
-    this.onCellTap,
-    this.onCellHover,
-    required this.onEditingCell,
-    this.editingCellId,
-  });
+  const DynamicTableCell({
+    Key? key,
+    required this.cellData,
+    required this.cellTextStyle,
+    this.onCellUpdate,
+    this.wrapContent = false,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    bool readOnly = readOnlyCells.contains(cellId);
-    return GestureDetector(
-      onTap: () {
-        if (isEditable && !readOnly) {
-          onEditingCell(cellId);
-        }
-        if (onCellTap != null) {
-          List<String> indices = cellId.split('-');
-          onCellTap!(int.parse(indices[0]), int.parse(indices[1]));
-        }
-      },
-      child: MouseRegion(
-        onEnter: (event) {
-          if (onCellHover != null) {
-            List<String> indices = cellId.split('-');
-            onCellHover!(int.parse(indices[0]), int.parse(indices[1]));
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.all(8.0),
-          child: _buildCellContent(context),
-        ),
-      ),
+    return Container(
+      padding: EdgeInsets.all(8.0),
+      constraints: BoxConstraints(minHeight: 48.0),
+      child: cellData.customWidget ??
+          TextFormField(
+            readOnly: !cellData.isEditable,
+            initialValue: cellData.content.toString(),
+            onChanged: (value) {
+              cellData.updateContent(value);
+              if (onCellUpdate != null) {
+                onCellUpdate!(value);
+              }
+            },
+            maxLines: wrapContent ? null : 1,
+            decoration: InputDecoration(border: InputBorder.none),
+            style: cellTextStyle,
+          ),
     );
-  }
-
-  Widget _buildCellContent(BuildContext context) {
-    if (editingCellId == cellId && isEditable && cell is String) {
-      return TextFormField(
-        initialValue: cell,
-        style: cellStyle,
-        maxLines: null,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-        ),
-        onFieldSubmitted: (value) {
-          List<String> indices = cellId.split('-');
-          // Implementa la lógica para actualizar el valor de la celda en _data
-          // Utiliza el setState del contenedor para actualizar la celda
-        },
-      );
-    } else if (cell is Widget) {
-      return cell;
-    } else {
-      return Text(
-        cell.toString(),
-        style: cellStyle ?? TextStyle(color: Colors.black87),
-        softWrap: true,
-        maxLines: null,
-        overflow: TextOverflow.visible,
-      );
-    }
   }
 }

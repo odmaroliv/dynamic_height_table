@@ -1,112 +1,96 @@
+import 'package:dynamic_height_table/dynamic_height_table.dart.dart';
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'dynamic_height_table_header.dart';
-import 'dynamic_height_table_row.dart';
+import 'models/table_cell_data.dart';
+import 'models/table_row_data.dart';
 
-class DynamicHeightTableContainer extends StatefulWidget {
-  final List<Widget> children;
-  final Color? borderColor;
-  final List<TableColumnWidth>? columnWidths;
+typedef CellContentBuilder = Widget Function(
+    int rowIndex, int columnIndex, TableCellData cellData);
+typedef AddRowCallback = void Function();
+typedef DeleteRowCallback = void Function(int rowIndex);
 
-  DynamicHeightTableContainer({
+class DynamicTable extends StatelessWidget {
+  final List<TableRowData> data;
+  final List<String> headers;
+  final Color headerColor;
+  final Color cellColor;
+  final TextStyle headerTextStyle;
+  final TextStyle cellTextStyle;
+  final double elevation;
+  final bool wrapContent;
+  final CellContentBuilder? cellContentBuilder;
+  final AddRowCallback? onAddRow;
+  final DeleteRowCallback? onDeleteRow;
+
+  DynamicTable({
     Key? key,
-    required this.children,
-    this.borderColor,
-    this.columnWidths,
+    required this.data,
+    required this.headers,
+    this.headerColor = Colors.blueGrey,
+    this.cellColor = Colors.white,
+    this.headerTextStyle =
+        const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+    this.cellTextStyle = const TextStyle(color: Colors.black87),
+    this.elevation = 4.0,
+    this.wrapContent = false,
+    this.cellContentBuilder,
+    this.onAddRow,
+    this.onDeleteRow,
   }) : super(key: key);
 
   @override
-  DynamicHeightTableContainerState createState() =>
-      DynamicHeightTableContainerState();
-}
-
-class DynamicHeightTableContainerState
-    extends State<DynamicHeightTableContainer> {
-  int? _hoveredRowIndex;
-  String? _editingCellId;
-  List<List<dynamic>> _data = [];
-  Set<String> _readOnlyCells = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _data = widget.children
-        .whereType<DynamicHeightTableRow>()
-        .map((row) => row.row)
-        .toList();
-    widget.children.whereType<DynamicHeightTableRow>().forEach((row) {
-      row.readOnlyCells.forEach((cellId) {
-        _readOnlyCells.add(cellId);
-      });
-    });
-  }
-
-  void addRow(List<dynamic> rowData, {Set<int>? readOnlyColumns}) {
-    setState(() {
-      int newRowIdx = _data.length;
-      _data.add(rowData);
-      if (readOnlyColumns != null) {
-        readOnlyColumns.forEach((colIdx) {
-          _readOnlyCells.add("$newRowIdx-$colIdx");
-        });
-      }
-    });
-  }
-
-  String exportToJson() {
-    return _toJson(_data);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: Table(
-        columnWidths: widget.columnWidths != null
-            ? Map.fromIterables(
-                List.generate(widget.columnWidths!.length, (index) => index),
-                widget.columnWidths!,
-              )
-            : {0: FlexColumnWidth()},
-        border: TableBorder.symmetric(
-          inside: BorderSide(color: widget.borderColor ?? Colors.grey.shade300),
+    int numColumns = headers.length;
+    return Material(
+      elevation: elevation,
+      child: SingleChildScrollView(
+        child: Table(
+          columnWidths: const {0: FlexColumnWidth()},
+          border: TableBorder.all(color: Colors.grey),
+          children: [
+            TableRow(
+              children: headers
+                  .map((header) => TableCell(
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 16.0),
+                          color: headerColor,
+                          child: Text(header,
+                              style: headerTextStyle ??
+                                  TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ))
+                  .toList(),
+            ),
+            ...data.asMap().entries.map((entry) {
+              int rowIndex = entry.key;
+              TableRowData rowData = entry.value;
+              return DynamicTableRow(
+                rowData: rowData,
+                cellTextStyle: cellTextStyle,
+                cellColor: cellColor,
+                numColumns: numColumns,
+                wrapContent: wrapContent,
+                cellContentBuilder: cellContentBuilder,
+                onDeleteRow: onDeleteRow,
+                rowIndex: rowIndex,
+              ).buildTableRow();
+            }).toList(),
+            if (onAddRow != null)
+              TableRow(
+                children: [
+                  TableCell(
+                    child: IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: onAddRow,
+                    ),
+                  ),
+                  ...List.generate(
+                      numColumns - 1, (index) => TableCell(child: Container())),
+                ],
+              ),
+          ],
         ),
-        children: widget.children.map((child) {
-          if (child is DynamicHeightTableRow) {
-            return child.buildRow(context, _hoveredRowIndex, _onRowHover,
-                _editingCellId, _onEditingCell);
-          } else if (child is DynamicHeightTableHeader) {
-            return child.buildHeaderRow(context);
-          }
-          return TableRow(children: [child]);
-        }).toList(),
       ),
     );
-  }
-
-  void _onEditingCell(String cellId) {
-    setState(() {
-      _editingCellId = cellId;
-    });
-  }
-
-  void _onRowHover(int rowIndex) {
-    setState(() {
-      _hoveredRowIndex = rowIndex;
-    });
-  }
-
-  String _toJson(List<List<dynamic>> data) {
-    List<List<dynamic>> sanitizedData = data.map((row) {
-      return row.map((cell) {
-        if (cell is Icon) {
-          return cell.icon.toString();
-        } else if (cell is Widget) {
-          return 'Widget';
-        }
-        return cell.toString();
-      }).toList();
-    }).toList();
-    return json.encode(sanitizedData);
   }
 }

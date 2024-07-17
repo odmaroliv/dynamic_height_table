@@ -1,90 +1,71 @@
+import 'package:dynamic_height_table/dynamic_height_table.dart.dart';
 import 'package:flutter/material.dart';
-import 'dynamic_height_table_cell.dart';
 
-class DynamicHeightTableRow extends StatelessWidget {
+import 'models/table_cell_data.dart';
+
+import 'models/table_row_data.dart';
+
+class DynamicTableRow {
+  final TableRowData rowData;
+  final TextStyle cellTextStyle;
+  final Color cellColor;
+  final int numColumns;
+  final bool wrapContent;
+  final CellContentBuilder? cellContentBuilder;
+  final DeleteRowCallback? onDeleteRow;
   final int rowIndex;
-  final List<dynamic> row;
-  final TextStyle? cellStyle;
-  final Color? rowColor;
-  final Color? hoverColor;
-  final Set<String> readOnlyCells;
-  final bool isEditable;
-  final Function(int, int)? onCellTap;
-  final Function(int, int)? onCellHover;
-  final Function(int)? onRowHover;
-  final Function(String) onEditingCell;
-  final String? editingCellId;
-  final List<Widget> Function(int)? additionalActions;
 
-  DynamicHeightTableRow({
+  DynamicTableRow({
+    required this.rowData,
+    required this.cellTextStyle,
+    required this.cellColor,
+    required this.numColumns,
+    this.wrapContent = false,
+    this.cellContentBuilder,
+    this.onDeleteRow,
     required this.rowIndex,
-    required this.row,
-    this.cellStyle,
-    this.rowColor,
-    this.hoverColor,
-    required this.readOnlyCells,
-    required this.isEditable,
-    this.onCellTap,
-    this.onCellHover,
-    this.onRowHover,
-    required this.onEditingCell,
-    this.editingCellId,
-    this.additionalActions,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Table(
-      children: [
-        buildRow(
-            context, null, onRowHover ?? (_) {}, editingCellId, onEditingCell)
-      ],
-    );
-  }
-
-  TableRow buildRow(
-      BuildContext context,
-      int? hoveredRowIndex,
-      Function(int) onRowHover,
-      String? editingCellId,
-      Function(String) onEditingCell) {
+  TableRow buildTableRow() {
+    List<TableCellData> rowCells = List.from(rowData.cells);
+    // Agregar celdas vacías si es necesario
+    while (rowCells.length < numColumns) {
+      rowCells.add(TableCellData(content: '', isEditable: false));
+    }
     return TableRow(
-      decoration: BoxDecoration(
-        color: hoveredRowIndex == rowIndex
-            ? (hoverColor ?? Colors.grey[200])
-            : rowColor ?? Colors.white,
-      ),
-      children: row.map((cell) {
-        int cellIndex = row.indexOf(cell);
-        String cellId =
-            "$rowIndex-$cellIndex"; // Unique identifier for each cell
+      decoration: BoxDecoration(color: cellColor),
+      children: rowCells.asMap().entries.map((entry) {
+        int cellIndex = entry.key;
+        TableCellData cellData = entry.value;
         return TableCell(
-          child: MouseRegion(
-            onEnter: (_) => onRowHover(rowIndex),
-            child: DynamicHeightTableCell(
-              cellId: cellId,
-              cell: cell,
-              cellStyle: cellStyle,
-              readOnlyCells: readOnlyCells,
-              isEditable: isEditable,
-              onCellTap: onCellTap,
-              onCellHover: onCellHover,
-              onEditingCell: onEditingCell,
-              editingCellId: editingCellId,
-            ),
+          child: Stack(
+            children: [
+              IntrinsicHeight(
+                child: cellContentBuilder != null
+                    ? cellContentBuilder!(rowIndex, cellIndex, cellData)
+                    : DynamicTableCell(
+                        cellData: cellData,
+                        cellTextStyle: cellTextStyle,
+                        onCellUpdate: null,
+                        wrapContent: wrapContent,
+                      ),
+              ),
+              if (onDeleteRow != null && cellIndex == rowCells.length - 1)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: IconButton(
+                    icon: Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      onDeleteRow!(rowIndex);
+                    },
+                  ),
+                ),
+            ],
           ),
         );
-      }).toList()
-        ..add(_buildActionButtons(context, rowIndex)),
-    );
-  }
-
-  TableCell _buildActionButtons(BuildContext context, int index) {
-    return TableCell(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: additionalActions != null ? additionalActions!(index) : [],
-      ),
+      }).toList(),
     );
   }
 }

@@ -1,62 +1,39 @@
 import 'package:flutter/material.dart';
 
-class DynamicHeightTableHeader extends StatelessWidget {
-  final List<String> columnHeaders;
+class DynamicTableHeader extends StatelessWidget {
+  final List<String> headers;
   final TextStyle? headerStyle;
-  final Color? headerColor;
-  final bool additionalActions;
 
-  DynamicHeightTableHeader({
-    required this.columnHeaders,
+  const DynamicTableHeader({
+    Key? key,
+    required this.headers,
     this.headerStyle,
-    this.headerColor,
-    this.additionalActions = false,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Table(
-      children: [buildHeaderRow(context)],
-    );
-  }
-
-  TableRow buildHeaderRow(BuildContext context) {
-    return TableRow(
-      decoration: BoxDecoration(color: headerColor ?? Colors.grey[200]),
-      children: columnHeaders.map((header) {
-        return TableCell(
-          child: Container(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              header,
-              style: headerStyle ??
-                  TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-              softWrap: true,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        );
-      }).toList()
-        ..add(additionalActions
-            ? _buildActionHeader()
-            : TableCell(child: Container())),
-    );
-  }
-
-  TableCell _buildActionHeader() {
-    return TableCell(
-      child: Container(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          'Actions',
-          style: headerStyle ??
-              TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-          softWrap: true,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+      children: [
+        TableRow(
+          children: headers
+              .map((header) => TableCell(
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      decoration: BoxDecoration(
+                        color: Colors.purple,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(header,
+                          style: headerStyle ??
+                              TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                    ),
+                  ))
+              .toList(),
+        )
+      ],
     );
   }
 }
