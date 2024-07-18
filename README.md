@@ -39,7 +39,7 @@ dependencies:
   dynamic_height_table:
     git:
       url: https://github.com/odmaroliv/dynamic_height_table.git
-      ref: main
+      ref: master
 ```
 
 ## Usage
